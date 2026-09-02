@@ -1,0 +1,7 @@
+pytest>=7.0.0
+pytest-xdist
+pytest-playwright
+playwright
+selenium>=4.0.0
+webdriver-manager
+requests
