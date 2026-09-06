@@ -1,16 +1,12 @@
 name: CI
 
 on:
-  push:
-    branches: [main, test]
   pull_request:
-    branches: [main]
+    branches: [test]
   workflow_dispatch:
 
 permissions:
   contents: read
-  actions: read
-  pull-requests: write
 
 # Pages takes one deployment at a time; queue them rather than cancel, so the
 # newest push wins instead of the fastest.
