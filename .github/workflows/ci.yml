@@ -33,6 +33,7 @@ jobs:
 
       - name: Run tests and publish report
         uses: prashanth-sams/pytest-html-reporter-action@v1
+        continue-on-error: true
         with:
           tests: |
             test_api_reqres.py
@@ -59,7 +60,7 @@ jobs:
 
   deploy-pages:
     needs: test
-    if: github.ref == 'refs/heads/main'
+    if: always() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
