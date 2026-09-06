@@ -5,12 +5,18 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
   pull-requests: write
-  pages: write
-  id-token: write
+
+# Pages takes one deployment at a time; queue them rather than cancel, so the
+# newest push wins instead of the fastest.
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -33,7 +39,6 @@ jobs:
 
       - name: Run tests and publish report
         uses: prashanth-sams/pytest-html-reporter-action@v1
-        continue-on-error: true
         with:
           tests: |
             test_api_reqres.py
@@ -41,31 +46,36 @@ jobs:
             test_playwright_calculator.py
             test_selenium_google.py
           title: py-testing-framework
+          environment: github-actions
+          # Pages serves index.html at the site root, and the report is a
+          # single page - so name it that and no landing page is needed.
+          report-path: report/index.html
+          # The action uploads the Pages artifact itself; deploy-pages below
+          # picks it up.
+          pages-artifact: 'true'
           history: 'true'
           comment: 'true'
           comment-mode: always
           artifact-name: pytest-html-report
-
-      - name: Prepare GitHub Pages content
-        if: always()
-        run: |
-          mkdir -p pages
-          cp pytest_html_report.html pages/index.html
-
-      - name: Upload GitHub Pages artifact
-        if: always()
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: pages
+          report-url: https://prashanth-sams.github.io/pytest-playground/
+          # A failing test must not stop the deploy and leave the live report
+          # showing an older run. The report itself records the failures.
+          fail-on-error: 'false'
 
   deploy-pages:
+    name: publish to Pages
     needs: test
-    if: always() && github.ref == 'refs/heads/main'
+    # Only a push to main deploys: a pull request build produces the artifact
+    # but must not overwrite the live site, and a fork PR cannot deploy at all.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
