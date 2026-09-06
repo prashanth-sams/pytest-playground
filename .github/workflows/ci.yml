@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, test]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -65,9 +65,14 @@ jobs:
   deploy-pages:
     name: publish to Pages
     needs: test
-    # Only a push to main deploys: a pull request build produces the artifact
-    # but must not overwrite the live site, and a fork PR cannot deploy at all.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Only a push deploys: a pull request build produces the artifact but must
+    # not overwrite the live site, and a fork PR gets a read-only token and
+    # cannot deploy at all - it would fail rather than skip. `test` is here so
+    # the site can be exercised before the change reaches main; whatever is
+    # pushed there becomes the live report until main is pushed again.
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/test')
     runs-on: ubuntu-latest
     permissions:
       pages: write
